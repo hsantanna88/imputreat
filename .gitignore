@@ -1,0 +1,32 @@
+# R-specific files
+*.Rhistory
+*.Rdata
+*.Ruserdata
+*.Rproj.user
+
+# Exclude commonly large datasets extensions
+*.csv
+*.tsv
+*.xlsx
+*.dta
+*.sav
+*.rds
+*.rda
+
+# R Markdown & related
+*.html
+*.log
+*_cache/
+/cache/
+-figure/
+
+# Temporary files
+*~
+*.swp
+*.bak
+
+# macOS-related
+.DS_Store
+
+# datasets
+data
