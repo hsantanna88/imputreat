@@ -21,35 +21,34 @@ library(feather) # Fast data loader
 # Loading the dataset
 df <- read_feather("data/wagescars_wrangled.feather")
 
-# Testing with lag_exper
+# making the lagged experience variable
 df <- df %>%
-  mutate(lag_exper = lag(exper))
+  arrange(id, year) %>% 
+  group_by(id) %>% 
+  mutate(lag_exper = lag(exper)) %>% 
+  ungroup()
 
-
+# Estimating the beta coefficients
 beta <- coef(fixest::feols(exper ~ lag_exper, data=filter(df, year_sep == 0)))
-
+alpha<- beta[2]
+beta <- beta[1]
 
 # Create a function for the accumulation logic
-update_exper <- function(previous_exper, year, year_sep) {
-  if (year >= year_sep & !is.na(previous_exper)) {
-    return(beta[1] + previous_exper * beta[2])
-  } else {
-    return(previous_exper)
-  }
-}
-
-
-# Updating the treatment group variables
 df <- df %>%
-  arrange(id, year) %>%
   group_by(id) %>%
   mutate(
-    exper = ifelse(year_sep != 0, pmap_dbl(
-      list(previous_exper = c(first(exper), exper[-n()]), 
-           year, year_sep), 
-      update_exper
-    ), exper),
+    imput_obs = ifelse(year_sep != 0, lag_exper[year == year_sep], NA)
+  ) %>% 
+  rowwise() %>% 
+  mutate(
+    T = year - year_sep + 1,
+    imput_exper = ifelse(
+      year_sep != 0 & year >= year_sep,
+      beta * sum(alpha^(0:(T-1))) + imput_obs * alpha^T,
+      exper
+    )
   ) %>%
-  ungroup()
+  ungroup() %>% 
+  select(-imput_obs, -T)
 
 # END OF SCRIPT
