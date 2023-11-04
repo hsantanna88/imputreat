@@ -14,41 +14,53 @@
 #-------------------------------------------------------------------------------
 
 # Loading the Libraries
-library(tidyverse) # Data Wrangling
-library(tidylog) # Tidyverse logs
+library(data.table) # Fast data manipulation
 library(feather) # Fast data loader
 
 # Loading the dataset
-df <- read_feather("data/wagescars_wrangled.feather")
+dt <- read_feather("data/wagescars_wrangled.feather")
 
-# making the lagged experience variable
-df <- df %>%
-  arrange(id, year) %>% 
-  group_by(id) %>% 
-  mutate(lag_exper = lag(exper)) %>% 
-  ungroup()
+group_var = "year_sep"
+time_var = "year"
+imput_var = "exper"
+id_var = "id"
 
-# Estimating the beta coefficients
-beta <- coef(fixest::feols(exper ~ lag_exper, data=filter(df, year_sep == 0)))
-alpha<- beta[2]
-beta <- beta[1]
+imputreat = function(dt, imput_var, group_var, id_var, time_var) {
 
-# Create a function for the accumulation logic
-df <- df %>%
-  group_by(id) %>%
-  mutate(
-    imput_obs = ifelse(year_sep != 0, lag_exper[year == year_sep], NA)
-  ) %>% 
-  rowwise() %>% 
-  mutate(
-    T = year - year_sep + 1,
-    imput_exper = ifelse(
-      year_sep != 0 & year >= year_sep,
-      beta * sum(alpha^(0:(T-1))) + imput_obs * alpha^T,
-      exper
+  # Ensure the data is a data.table
+  setDT(dt)
+
+  # Create the lagged variable by reference
+  dt[,
+    lag_var := shift(get(imput_var)),
+      by = get(id_var)][order(get(id_var), get(time_var))]
+
+  # Estimating the beta coefficients
+  frml = formula(paste0(imput_var, " ~ lag_var"))
+  beta = coef(fixest::feols(frml, data=dt))
+  beta1 = beta[1]
+  beta2 = beta[2]
+
+  print(beta1)
+  print(beta2)
+
+  # Get the lagged variable for right before treatment
+  dt[, imput_obs := fifelse(get(group_var) == get(time_var), lag_var, NA_real_), by = get(id_var)]
+
+  dt[, imput_obs := nafill(imput_obs, type = "locf"), by = get(id_var)]
+
+  # Step 3: Ensure that the control group (group_var == 0) has NA for imput_obs
+  dt[get(group_var) == 0, imput_obs := NA_real_]
+
+  dt[, imput := {
+    T = get(time_var) - get(group_var) + 1
+    fifelse(
+      get(group_var) != 0 & get(time_var) >= get(group_var),
+      sapply(T, function(t) {
+        beta1 * sum(beta2^(0:(t - 1)))}) + imput_obs * beta2^T,
+      get(imput_var)
     )
-  ) %>%
-  ungroup() %>% 
-  select(-imput_obs, -T)
+  }, by = .(get(id_var))]
+}
 
 # END OF SCRIPT
