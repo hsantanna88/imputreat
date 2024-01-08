@@ -12,6 +12,7 @@
 #'                           "id_var_name", "time_var_name")
 #' 
 #' @export
+#' @import data.table
 #' 
 #' @author Stroud Payne (1) and Hugo Sant'Anna (2)
 #'   (1) Vanderbilt University
