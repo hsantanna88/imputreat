@@ -1,31 +1,26 @@
-#-------------------------------------------------------------------------------
-# Name: Generating the imputation variable
-#-------------------------------------------------------------------------------
-#
-# Description: Script for the Difference-in-Differences with "Bad Covariates"
-#  Paper Application (Callaway & Pedro Sant'Anna multiple Time Periods)
-#
-#-------------------------------------------------------------------------------
-#
-# Authors: Stroud Payne (1) and Hugo Sant'Anna (2)
-#   (1) Vanderbilt University
-#   (2) University of Georgia
-#
-#-------------------------------------------------------------------------------
-
-# Loading the Libraries
-library(data.table) # Fast data manipulation
-library(feather) # Fast data loader
-
-# Loading the dataset
-dt <- read_feather("data/wagescars_wrangled.feather")
-
-group_var = "year_sep"
-time_var = "year"
-imput_var = "exper"
-id_var = "id"
-
-imputreat = function(dt, imput_var, group_var, id_var, time_var) {
+#' Auxiliary function for the Difference-in-Differences with bad covariates. 
+#'
+#' @param dt A dataset object, in "long" format.
+#' @param imput_var String name of the imputation variable.
+#' @param group_var String name of the group variable.
+#' @param id_var String name of the individual identifier variable.
+#' @param time_var String name of the time identifier variable.
+#' @return A modified data.table object with new column for the imputation variable.
+#' @examples
+#' # Assuming `data` is a data.table with appropriate columns:
+#' imputed_data <- imputreat(data, "imput_var_name", "group_var_name", 
+#'                           "id_var_name", "time_var_name")
+#' 
+#' @export
+#' 
+#' @author Stroud Payne (1) and Hugo Sant'Anna (2)
+#'   (1) Vanderbilt University
+#'   (2) University of Georgia
+#'
+#' @references
+#' Caetano, C., & Callaway, B., & Payne, S., & Sant'Anna, H.(2024). Difference-in-differences With Bad Covariates.
+#'
+imputreat <- function(dt, imput_var, group_var, id_var, time_var) {
 
   # Ensure the data is a data.table
   setDT(dt)
